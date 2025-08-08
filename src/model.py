@@ -1,78 +1,103 @@
 import pandas as pd
 import numpy as np
+import time
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+
 from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score, roc_auc_score,
-    confusion_matrix, roc_curve
+    accuracy_score, precision_score, recall_score, f1_score,
+    roc_auc_score, confusion_matrix, classification_report, roc_curve
 )
 
-# Step 1: Load the dataset
-df = pd.read_csv('data/heart_cleveland_upload.csv')
-print("✅ Data Loaded:", df.shape)
+# Load and Prepare Data 
 
-# Step 2: Basic EDA
-print(df.head())
-print("\nData Info:\n", df.info())
-print("\nMissing Values:\n", df.isnull().sum())
+df = pd.read_csv("data/heart.csv")
 
-# Step 3: Features and Target
-# In this dataset, target = 1 means presence of heart disease
-X = df.drop('condition', axis=1)
-y = df['condition']
+X = df.drop("condition", axis=1)
+y = df["condition"]
 
-# Step 4: Train/Test Split
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
-
-# Step 5: Feature Scaling
+# Standardize numeric features for boosting
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+X_scaled = scaler.fit_transform(X)
 
-# Step 6: Train Logistic Regression
-model = LogisticRegression()
-model.fit(X_train_scaled, y_train)
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled, y, test_size=0.2, random_state=42
+)
 
-# Step 7: Make Predictions
-y_pred = model.predict(X_test_scaled)
-y_prob = model.predict_proba(X_test_scaled)[:, 1]  # Probabilities for ROC
+# Define Models 
 
-# Step 8: Evaluation Metrics
-accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred)
-recall = recall_score(y_test, y_pred)
-f1 = f1_score(y_test, y_pred)
-roc_auc = roc_auc_score(y_test, y_prob)
-print("\n📊 Evaluation Metrics:")
-print(f"Accuracy:  {accuracy:.3f}")
-print(f"Precision: {precision:.3f}")
-print(f"Recall:    {recall:.3f}")
-print(f"F1 Score:  {f1:.3f}")
-print(f"ROC-AUC:   {roc_auc:.3f}")
+models = {
+    "Decision Tree": DecisionTreeClassifier(random_state=42),
+    "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
+    "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+}
 
-# Step 9: Confusion Matrix
-cm = confusion_matrix(y_test, y_pred)
-plt.figure(figsize=(5, 4))
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-plt.xlabel("Predicted")
-plt.ylabel("Actual")
-plt.title("Confusion Matrix")
-plt.tight_layout()
-plt.show()
+results = []
 
-# Step 10: ROC Curve
-fpr, tpr, thresholds = roc_curve(y_test, y_prob)
-plt.figure(figsize=(6, 5))
-plt.plot(fpr, tpr, label=f"ROC Curve (AUC = {roc_auc:.2f})")
+# Train and Evaluate
+
+for name, model in models.items():
+    print(f"\nTraining {name}...")
+
+    start = time.time()
+    model.fit(X_train, y_train)
+    duration = time.time() - start
+
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]  # for ROC-AUC
+
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred)
+    rec = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    auc = roc_auc_score(y_test, y_prob)
+
+    results.append({
+        "Model": name,
+        "Accuracy": acc,
+        "Precision": prec,
+        "Recall": rec,
+        "F1 Score": f1,
+        "ROC AUC": auc,
+        "Train Time (s)": duration
+    })
+
+    print(f"\n{name} Classification Report:\n")
+    print(classification_report(y_test, y_pred, digits=4))
+
+    # Confusion Matrix
+    cm = confusion_matrix(y_test, y_pred)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.title(f"Confusion Matrix - {name}")
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.show()
+
+# Summary Table 
+
+results_df = pd.DataFrame(results)
+print("\nModel Comparison Summary:\n")
+print(results_df)
+
+# ROC Curve
+
+plt.figure(figsize=(10, 6))
+for name, model in models.items():
+    y_prob = model.predict_proba(X_test)[:, 1]
+    fpr, tpr, _ = roc_curve(y_test, y_prob)
+    auc = roc_auc_score(y_test, y_prob)
+    plt.plot(fpr, tpr, label=f"{name} (AUC = {auc:.3f})")
+
 plt.plot([0, 1], [0, 1], 'k--')
+plt.title("ROC Curves")
 plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
-plt.title("ROC Curve")
 plt.legend()
-plt.tight_layout()
+plt.grid(True)
 plt.show()
