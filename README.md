@@ -37,6 +37,7 @@ Visual Outputs:
 - Model metrics table
 
 Insights:
+
 	•	Decision Tree performed best overall, due to simplicity and small dataset.
  
 	•	Random Forest showed strongest ranking performance (ROC AUC), but weaker prediction performance.
