@@ -1,5 +1,6 @@
 # heart-diseases-predictor
 Decision Tree vs Random Forest vs XGBoost
+
 This project compares three powerful tree-based machine learning models on a real-world heart disease prediction dataset.
 
 The goal is to understand the **performance trade-offs** between simple and ensemble tree classifiers in terms of accuracy, generalization, and interpretability.
