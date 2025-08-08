@@ -38,6 +38,9 @@ Visual Outputs:
 
 Insights:
 	•	Decision Tree performed best overall, due to simplicity and small dataset.
+ 
 	•	Random Forest showed strongest ranking performance (ROC AUC), but weaker prediction performance.
+ 
 	•	XGBoost needs tuning to outperform others on small datasets.
+ 
 	•	Tree models are great at capturing nonlinear interactions.
